@@ -41,10 +41,21 @@ async function getYtDlpPath() {
   throw new Error("yt-dlp não encontrado. No Windows, coloque yt-dlp.exe na pasta server/");
 }
 
-function downloadFile(url, dest) {
+function downloadFile(url, dest, redirectCount = 0) {
   return new Promise((resolve, reject) => {
+    if (redirectCount > 10) {
+      reject(new Error("Too many redirects"));
+      return;
+    }
     const file = createWriteStream(dest);
     https.get(url, (response) => {
+      if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+        // Follow redirect
+        file.close();
+        unlink(dest, () => {});
+        downloadFile(response.headers.location, dest, redirectCount + 1).then(resolve).catch(reject);
+        return;
+      }
       if (response.statusCode !== 200) {
         reject(new Error(`Failed to download: ${response.statusCode}`));
         return;
