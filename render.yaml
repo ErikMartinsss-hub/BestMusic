@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: bestmusic-server
+    env: node
+    plan: free
+    rootDir: server
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    healthCheckPath: /api/search?q=test
+    envVars:
+      - key: PORT
+        value: 8000
