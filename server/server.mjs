@@ -11,8 +11,8 @@ import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { existsSync, chmodSync, writeFileSync } from "node:fs";
-import { platform, arch } from "node:process";
+import { existsSync, chmodSync, createWriteStream, unlink } from "node:fs";
+import { platform } from "node:process";
 import https from "node:https";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -43,7 +43,7 @@ async function getYtDlpPath() {
 
 function downloadFile(url, dest) {
   return new Promise((resolve, reject) => {
-    const file = require("node:fs").createWriteStream(dest);
+    const file = createWriteStream(dest);
     https.get(url, (response) => {
       if (response.statusCode !== 200) {
         reject(new Error(`Failed to download: ${response.statusCode}`));
@@ -52,7 +52,7 @@ function downloadFile(url, dest) {
       response.pipe(file);
       file.on("finish", () => file.close(resolve));
     }).on("error", (err) => {
-      require("node:fs").unlink(dest, () => {});
+      unlink(dest, () => {});
       reject(err);
     });
   });
