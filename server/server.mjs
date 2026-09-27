@@ -3,21 +3,68 @@
 // Como rodar:
 //   node server.mjs
 //
-// O servidor usa o binário yt-dlp.exe da mesma pasta (baixado junto).
 // Emulador Android: http://10.0.2.2:8000
 // Aparelho físico:  http://<IP-da-sua-maquina>:8000 (configurar no app, menu ⚙)
+// Render/Cloud: baixa yt-dlp Linux automaticamente no startup.
 
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { existsSync, chmodSync, writeFileSync } from "node:fs";
+import { platform, arch } from "node:process";
+import https from "node:https";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const YTDLP = process.env.YTDLP_PATH || join(__dirname, "yt-dlp.exe");
 
-function run(args, timeoutMs = 60000) {
+// Resolve yt-dlp binary per platform
+async function getYtDlpPath() {
+  const isWindows = platform === "win32";
+  const binaryName = isWindows ? "yt-dlp.exe" : "yt-dlp";
+  const localPath = join(__dirname, binaryName);
+
+  if (existsSync(localPath)) {
+    if (!isWindows) chmodSync(localPath, 0o755);
+    return localPath;
+  }
+
+  // Download Linux binary on non-Windows (Render, etc.)
+  if (!isWindows) {
+    console.log("Baixando yt-dlp Linux...");
+    const url = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux";
+    await downloadFile(url, localPath);
+    chmodSync(localPath, 0o755);
+    console.log("yt-dlp pronto:", localPath);
+    return localPath;
+  }
+
+  throw new Error("yt-dlp não encontrado. No Windows, coloque yt-dlp.exe na pasta server/");
+}
+
+function downloadFile(url, dest) {
   return new Promise((resolve, reject) => {
-    const child = spawn(YTDLP, args, { windowsHide: true });
+    const file = require("node:fs").createWriteStream(dest);
+    https.get(url, (response) => {
+      if (response.statusCode !== 200) {
+        reject(new Error(`Failed to download: ${response.statusCode}`));
+        return;
+      }
+      response.pipe(file);
+      file.on("finish", () => file.close(resolve));
+    }).on("error", (err) => {
+      require("node:fs").unlink(dest, () => {});
+      reject(err);
+    });
+  });
+}
+
+// Initialize YTDLP path
+let YTDLP_READY = getYtDlpPath().then(p => { YTDLP_PATH = p; }).catch(e => console.error("yt-dlp init error:", e));
+
+async function run(args, timeoutMs = 60000) {
+  await YTDLP_READY;
+  return new Promise((resolve, reject) => {
+    const child = spawn(YTDLP_PATH, args, { windowsHide: true });
     let stdout = "";
     let stderr = "";
     child.stdout.setEncoding("utf8");
