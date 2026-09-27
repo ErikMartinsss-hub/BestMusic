@@ -76,6 +76,7 @@ let YTDLP_READY = getYtDlpPath().then(p => { YTDLP_PATH = p; }).catch(e => conso
 async function run(args, timeoutMs = 60000) {
   await YTDLP_READY;
   return new Promise((resolve, reject) => {
+    console.log("yt-dlp args:", args.join(" "));
     const child = spawn(YTDLP_PATH, args, { windowsHide: true });
     let stdout = "";
     let stderr = "";
@@ -92,6 +93,15 @@ async function run(args, timeoutMs = 60000) {
       reject(new Error(`não foi possível executar yt-dlp: ${err.message}`));
     });
     child.on("close", (code) => {
+      clearTimeout(timer);
+      if (code === 0) {
+        console.log("yt-dlp stdout:", stdout.substring(0, 200));
+        resolve(stdout.trim());
+      } else {
+        console.error("yt-dlp stderr:", stderr);
+        reject(new Error(stderr.trim().split("\n").pop() || `yt-dlp saiu com código ${code}`));
+      }
+    });
       clearTimeout(timer);
       if (code === 0) resolve(stdout.trim());
       else reject(new Error(stderr.trim().split("\n").pop() || `yt-dlp saiu com código ${code}`));
