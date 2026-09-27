@@ -1,0 +1,180 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.bestmusic"
+4    android:versionCode="1"
+5    android:versionName="1.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="26"
+9        android:targetSdkVersion="36" />
+10
+11    <uses-permission android:name="android.permission.INTERNET" />
+11-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:4:5-67
+11-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:4:22-64
+12    <uses-permission android:name="android.permission.WAKE_LOCK" />
+12-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:5:5-68
+12-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:5:22-65
+13    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+13-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:6:5-77
+13-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:6:22-74
+14    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+14-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:7:5-92
+14-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:7:22-89
+15    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+15-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:8:5-77
+15-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:8:22-74
+16    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+16-->[androidx.media3:media3-common:1.5.1] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\4c2ca494ebe9e4fa18e5f7d6c7bf2959\transformed\media3-common-1.5.1\AndroidManifest.xml:22:5-79
+16-->[androidx.media3:media3-common:1.5.1] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\4c2ca494ebe9e4fa18e5f7d6c7bf2959\transformed\media3-common-1.5.1\AndroidManifest.xml:22:22-76
+17
+18    <permission
+18-->[androidx.core:core:1.16.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\c8c26f346a94a850079899cc3df2be19\transformed\core-1.16.0\AndroidManifest.xml:22:5-24:47
+19        android:name="com.bestmusic.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+19-->[androidx.core:core:1.16.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\c8c26f346a94a850079899cc3df2be19\transformed\core-1.16.0\AndroidManifest.xml:23:9-81
+20        android:protectionLevel="signature" />
+20-->[androidx.core:core:1.16.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\c8c26f346a94a850079899cc3df2be19\transformed\core-1.16.0\AndroidManifest.xml:24:9-44
+21
+22    <uses-permission android:name="com.bestmusic.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+22-->[androidx.core:core:1.16.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\c8c26f346a94a850079899cc3df2be19\transformed\core-1.16.0\AndroidManifest.xml:26:5-97
+22-->[androidx.core:core:1.16.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\c8c26f346a94a850079899cc3df2be19\transformed\core-1.16.0\AndroidManifest.xml:26:22-94
+23
+24    <application
+24-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:10:5-38:19
+25        android:name="com.bestmusic.BestMusicApp"
+25-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:11:9-37
+26        android:allowBackup="true"
+26-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:12:9-35
+27        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+27-->[androidx.core:core:1.16.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\c8c26f346a94a850079899cc3df2be19\transformed\core-1.16.0\AndroidManifest.xml:28:18-86
+28        android:debuggable="true"
+29        android:extractNativeLibs="false"
+30        android:icon="@mipmap/ic_launcher"
+30-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:13:9-43
+31        android:label="@string/app_name"
+31-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:14:9-41
+32        android:supportsRtl="true"
+32-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:15:9-35
+33        android:theme="@style/Theme.BestMusic"
+33-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:17:9-47
+34        android:usesCleartextTraffic="true" >
+34-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:16:9-44
+35        <activity
+35-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:19:9-27:20
+36            android:name="com.bestmusic.MainActivity"
+36-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:20:13-41
+37            android:exported="true"
+37-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:21:13-36
+38            android:theme="@style/Theme.BestMusic" >
+38-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:22:13-51
+39            <intent-filter>
+39-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:23:13-26:29
+40                <action android:name="android.intent.action.MAIN" />
+40-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:24:17-69
+40-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:24:25-66
+41
+42                <category android:name="android.intent.category.LAUNCHER" />
+42-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:25:17-77
+42-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:25:27-74
+43            </intent-filter>
+44        </activity>
+45
+46        <service
+46-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:29:9-36:19
+47            android:name="com.bestmusic.player.PlaybackService"
+47-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:30:13-51
+48            android:exported="true"
+48-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:31:13-36
+49            android:foregroundServiceType="mediaPlayback" >
+49-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:32:13-58
+50            <intent-filter>
+50-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:33:13-35:29
+51                <action android:name="androidx.media3.session.MediaSessionService" />
+51-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:34:17-86
+51-->D:\BestMusic\android\app\src\main\AndroidManifest.xml:34:25-83
+52            </intent-filter>
+53        </service>
+54
+55        <activity
+55-->[androidx.compose.ui:ui-tooling-android:1.8.2] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\ce4484d5900cf95253074b944a79999c\transformed\ui-tooling-release\AndroidManifest.xml:23:9-25:39
+56            android:name="androidx.compose.ui.tooling.PreviewActivity"
+56-->[androidx.compose.ui:ui-tooling-android:1.8.2] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\ce4484d5900cf95253074b944a79999c\transformed\ui-tooling-release\AndroidManifest.xml:24:13-71
+57            android:exported="true" />
+57-->[androidx.compose.ui:ui-tooling-android:1.8.2] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\ce4484d5900cf95253074b944a79999c\transformed\ui-tooling-release\AndroidManifest.xml:25:13-36
+58
+59        <provider
+59-->[androidx.emoji2:emoji2:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\44b68c31623082dc27c8694f561e7846\transformed\emoji2-1.4.0\AndroidManifest.xml:24:9-32:20
+60            android:name="androidx.startup.InitializationProvider"
+60-->[androidx.emoji2:emoji2:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\44b68c31623082dc27c8694f561e7846\transformed\emoji2-1.4.0\AndroidManifest.xml:25:13-67
+61            android:authorities="com.bestmusic.androidx-startup"
+61-->[androidx.emoji2:emoji2:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\44b68c31623082dc27c8694f561e7846\transformed\emoji2-1.4.0\AndroidManifest.xml:26:13-68
+62            android:exported="false" >
+62-->[androidx.emoji2:emoji2:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\44b68c31623082dc27c8694f561e7846\transformed\emoji2-1.4.0\AndroidManifest.xml:27:13-37
+63            <meta-data
+63-->[androidx.emoji2:emoji2:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\44b68c31623082dc27c8694f561e7846\transformed\emoji2-1.4.0\AndroidManifest.xml:29:13-31:52
+64                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+64-->[androidx.emoji2:emoji2:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\44b68c31623082dc27c8694f561e7846\transformed\emoji2-1.4.0\AndroidManifest.xml:30:17-75
+65                android:value="androidx.startup" />
+65-->[androidx.emoji2:emoji2:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\44b68c31623082dc27c8694f561e7846\transformed\emoji2-1.4.0\AndroidManifest.xml:31:17-49
+66            <meta-data
+66-->[androidx.lifecycle:lifecycle-process:2.9.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\742b3946e0ee576c40c1c9b9557c5b47\transformed\lifecycle-process-2.9.0\AndroidManifest.xml:29:13-31:52
+67                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+67-->[androidx.lifecycle:lifecycle-process:2.9.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\742b3946e0ee576c40c1c9b9557c5b47\transformed\lifecycle-process-2.9.0\AndroidManifest.xml:30:17-78
+68                android:value="androidx.startup" />
+68-->[androidx.lifecycle:lifecycle-process:2.9.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\742b3946e0ee576c40c1c9b9557c5b47\transformed\lifecycle-process-2.9.0\AndroidManifest.xml:31:17-49
+69            <meta-data
+69-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\e25790d91f7e202906f35d7a4e9e7d49\transformed\profileinstaller-1.4.0\AndroidManifest.xml:29:13-31:52
+70                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+70-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\e25790d91f7e202906f35d7a4e9e7d49\transformed\profileinstaller-1.4.0\AndroidManifest.xml:30:17-85
+71                android:value="androidx.startup" />
+71-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\e25790d91f7e202906f35d7a4e9e7d49\transformed\profileinstaller-1.4.0\AndroidManifest.xml:31:17-49
+72        </provider>
+73
+74        <service
+74-->[androidx.room:room-runtime-android:2.7.0-alpha01] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\39e1843530a7d33cbcc3f1b0d66f6f38\transformed\room-runtime-release\AndroidManifest.xml:24:9-28:63
+75            android:name="androidx.room.MultiInstanceInvalidationService"
+75-->[androidx.room:room-runtime-android:2.7.0-alpha01] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\39e1843530a7d33cbcc3f1b0d66f6f38\transformed\room-runtime-release\AndroidManifest.xml:25:13-74
+76            android:directBootAware="true"
+76-->[androidx.room:room-runtime-android:2.7.0-alpha01] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\39e1843530a7d33cbcc3f1b0d66f6f38\transformed\room-runtime-release\AndroidManifest.xml:26:13-43
+77            android:exported="false" />
+77-->[androidx.room:room-runtime-android:2.7.0-alpha01] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\39e1843530a7d33cbcc3f1b0d66f6f38\transformed\room-runtime-release\AndroidManifest.xml:27:13-37
+78
+79        <receiver
+79-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\e25790d91f7e202906f35d7a4e9e7d49\transformed\profileinstaller-1.4.0\AndroidManifest.xml:34:9-52:20
+80            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+80-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\e25790d91f7e202906f35d7a4e9e7d49\transformed\profileinstaller-1.4.0\AndroidManifest.xml:35:13-76
+81            android:directBootAware="false"
+81-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\e25790d91f7e202906f35d7a4e9e7d49\transformed\profileinstaller-1.4.0\AndroidManifest.xml:36:13-44
+82            android:enabled="true"
+82-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\e25790d91f7e202906f35d7a4e9e7d49\transformed\profileinstaller-1.4.0\AndroidManifest.xml:37:13-35
+83            android:exported="true"
+83-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\e25790d91f7e202906f35d7a4e9e7d49\transformed\profileinstaller-1.4.0\AndroidManifest.xml:38:13-36
+84            android:permission="android.permission.DUMP" >
+84-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\e25790d91f7e202906f35d7a4e9e7d49\transformed\profileinstaller-1.4.0\AndroidManifest.xml:39:13-57
+85            <intent-filter>
+85-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\e25790d91f7e202906f35d7a4e9e7d49\transformed\profileinstaller-1.4.0\AndroidManifest.xml:40:13-42:29
+86                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+86-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\e25790d91f7e202906f35d7a4e9e7d49\transformed\profileinstaller-1.4.0\AndroidManifest.xml:41:17-91
+86-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\e25790d91f7e202906f35d7a4e9e7d49\transformed\profileinstaller-1.4.0\AndroidManifest.xml:41:25-88
+87            </intent-filter>
+88            <intent-filter>
+88-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\e25790d91f7e202906f35d7a4e9e7d49\transformed\profileinstaller-1.4.0\AndroidManifest.xml:43:13-45:29
+89                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+89-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\e25790d91f7e202906f35d7a4e9e7d49\transformed\profileinstaller-1.4.0\AndroidManifest.xml:44:17-85
+89-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\e25790d91f7e202906f35d7a4e9e7d49\transformed\profileinstaller-1.4.0\AndroidManifest.xml:44:25-82
+90            </intent-filter>
+91            <intent-filter>
+91-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\e25790d91f7e202906f35d7a4e9e7d49\transformed\profileinstaller-1.4.0\AndroidManifest.xml:46:13-48:29
+92                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+92-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\e25790d91f7e202906f35d7a4e9e7d49\transformed\profileinstaller-1.4.0\AndroidManifest.xml:47:17-88
+92-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\e25790d91f7e202906f35d7a4e9e7d49\transformed\profileinstaller-1.4.0\AndroidManifest.xml:47:25-85
+93            </intent-filter>
+94            <intent-filter>
+94-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\e25790d91f7e202906f35d7a4e9e7d49\transformed\profileinstaller-1.4.0\AndroidManifest.xml:49:13-51:29
+95                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+95-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\e25790d91f7e202906f35d7a4e9e7d49\transformed\profileinstaller-1.4.0\AndroidManifest.xml:50:17-95
+95-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ERIKPC\.gradle\caches\8.13\transforms\e25790d91f7e202906f35d7a4e9e7d49\transformed\profileinstaller-1.4.0\AndroidManifest.xml:50:25-92
+96            </intent-filter>
+97        </receiver>
+98    </application>
+99
+100</manifest>

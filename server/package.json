@@ -1,0 +1,13 @@
+{
+  "name": "bestmusic-server",
+  "version": "1.0.0",
+  "description": "BestMusic YouTube API server",
+  "main": "server.mjs",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

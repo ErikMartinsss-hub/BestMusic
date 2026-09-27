@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: bestmusic-server
+    env: node
+    plan: free
+    buildCommand: ""
+    startCommand: "node server.mjs"
+    healthCheckPath: /api/search?q=test
+    envVars:
+      - key: PORT
+        value: 8000

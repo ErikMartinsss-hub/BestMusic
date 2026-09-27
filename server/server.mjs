@@ -1,0 +1,127 @@
+// BestMusic server (Node, sem dependências).
+//
+// Como rodar:
+//   node server.mjs
+//
+// O servidor usa o binário yt-dlp.exe da mesma pasta (baixado junto).
+// Emulador Android: http://10.0.2.2:8000
+// Aparelho físico:  http://<IP-da-sua-maquina>:8000 (configurar no app, menu ⚙)
+
+import { spawn } from "node:child_process";
+import { createServer } from "node:http";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const YTDLP = process.env.YTDLP_PATH || join(__dirname, "yt-dlp.exe");
+
+function run(args, timeoutMs = 60000) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(YTDLP, args, { windowsHide: true });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (d) => (stdout += d));
+    child.stderr.on("data", (d) => (stderr += d));
+    const timer = setTimeout(() => {
+      child.kill();
+      reject(new Error(`yt-dlp timeout após ${timeoutMs}ms`));
+    }, timeoutMs);
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      reject(new Error(`não foi possível executar yt-dlp: ${err.message}`));
+    });
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      if (code === 0) resolve(stdout.trim());
+      else reject(new Error(stderr.trim().split("\n").pop() || `yt-dlp saiu com código ${code}`));
+    });
+  });
+}
+
+function parseJson(text) {
+  const start = text.indexOf("{");
+  if (start < 0) throw new Error("nenhum JSON retornado pelo yt-dlp");
+  return JSON.parse(text.slice(start));
+}
+
+const searchArgs = (q) => [
+  "--flat-playlist",
+  "--no-warnings",
+  "--quiet",
+  "--dump-single-json",
+  "--playlist-items", "1-6",
+  `ytsearch6:${q}`,
+];
+
+const streamArgs = (id) => [
+  "--no-warnings",
+  "--quiet",
+  "--dump-single-json",
+  "-f", "bestaudio[ext=m4a]/bestaudio/best",
+  id,
+];
+
+const thumb = (info) =>
+  info.thumbnail ||
+  (info.thumbnails?.length ? info.thumbnails.at(-1).url : null) ||
+  `https://i.ytimg.com/vi/${info.id}/hqdefault.jpg`;
+
+function send(res, code, payload) {
+  const body = typeof payload === "string" ? payload : JSON.stringify(payload);
+  res.writeHead(code, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Access-Control-Allow-Origin": "*",
+  });
+  res.end(body);
+}
+
+const server = createServer(async (req, res) => {
+  try {
+    const url = new URL(req.url, "http://localhost");
+
+    if (url.pathname === "/api/search") {
+      const q = (url.searchParams.get("q") || "").trim();
+      if (!q) return send(res, 400, { detail: "Parâmetro q é obrigatório" });
+      const data = parseJson(await run(searchArgs(q), 40000));
+      const entries = (data.entries || []).filter((e) => e.id && e.title);
+      return send(
+        res,
+        200,
+        entries.map((e) => ({
+          id: e.id,
+          title: e.title,
+          artist: null,
+          durationMs: (e.duration || 0) * 1000,
+          thumbnail: e.thumbnail || `https://i.ytimg.com/vi/${e.id}/hqdefault.jpg`,
+        })),
+      );
+    }
+
+    const m = url.pathname.match(/^\/api\/stream\/([^/]+)$/);
+    if (m) {
+      const id = decodeURIComponent(m[1]);
+      const info = parseJson(await run(streamArgs(id)));
+      if (!info.url) return send(res, 502, { detail: "Stream de áudio não encontrado" });
+      return send(res, 200, {
+        id: info.id,
+        title: info.title,
+        artist: info.uploader || null,
+        durationMs: (info.duration || 0) * 1000,
+        thumbnail: thumb(info),
+        url: info.url,
+      });
+    }
+
+    send(res, 404, { detail: "Endpoint não encontrado" });
+  } catch (err) {
+    send(res, 502, { detail: `yt-dlp falhou: ${err.message}` });
+  }
+});
+
+const PORT = Number(process.env.PORT || 8000);
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`BestMusic server rodando em http://0.0.0.0:${PORT}`);
+  console.log(`App Android (emulador): http://10.0.2.2:${PORT}`);
+});
