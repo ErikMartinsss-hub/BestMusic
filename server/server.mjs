@@ -70,6 +70,7 @@ function downloadFile(url, dest, redirectCount = 0) {
 }
 
 // Initialize YTDLP path
+let YTDLP_PATH = null;
 let YTDLP_READY = getYtDlpPath().then(p => { YTDLP_PATH = p; }).catch(e => console.error("yt-dlp init error:", e));
 
 async function run(args, timeoutMs = 60000) {
