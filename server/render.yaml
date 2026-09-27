@@ -3,8 +3,8 @@ services:
     name: bestmusic-server
     env: node
     plan: free
-    buildCommand: ""
-    startCommand: "node server.mjs"
+    buildCommand: "npm install"
+    startCommand: "npm start"
     healthCheckPath: /api/search?q=test
     envVars:
       - key: PORT
