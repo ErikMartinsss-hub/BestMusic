@@ -124,7 +124,7 @@ const streamArgs = (id) => [
   "--no-warnings",
   "--quiet",
   "--dump-single-json",
-  "-f", "bestaudio[ext=m4a]/bestaudio/best",
+  "-f", "bestaudio/best",
   id,
 ];
 
