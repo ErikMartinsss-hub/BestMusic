@@ -1,139 +1,141 @@
-// BestMusic server - yt-dlp otimizado para Render (sem SSL issues)
+// BestMusic server - Invidious API (yewtu.be) - mais confiável no Render
 
-import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import { existsSync, chmodSync, createWriteStream, unlink } from "node:fs";
-import { platform } from "node:process";
 import https from "node:https";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const INVIDIOUS_INSTANCES = [
+  "https://yewtu.be",
+  "https://invidious.snopyta.org",
+  "https://invidious.nerdvpn.de",
+  "https://invidious.kavin.rocks",
+  "https://yewtu.be",
+];
 
-// Resolve yt-dlp binary per platform
-async function getYtDlpPath() {
-  const isWindows = platform === "win32";
-  const binaryName = isWindows ? "yt-dlp.exe" : "yt-dlp";
-  const localPath = join(__dirname, binaryName);
+let instanceIndex = 0;
 
-  if (existsSync(localPath)) {
-    if (!isWindows) chmodSync(localPath, 0o755);
-    return localPath;
-  }
-
-  // Download Linux binary on non-Windows (Render, etc.)
-  if (!isWindows) {
-    console.log("Baixando yt-dlp Linux...");
-    const url = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux";
-    await downloadFile(url, localPath);
-    chmodSync(localPath, 0o755);
-    console.log("yt-dlp pronto:", localPath);
-    return localPath;
-  }
-
-  throw new Error("yt-dlp não encontrado. No Windows, coloque yt-dlp.exe na pasta server/");
+function getInstance() {
+  return INVIDIOUS_INSTANCES[instanceIndex % INVIDIOUS_INSTANCES.length];
 }
 
-function downloadFile(url, dest, redirectCount = 0) {
+function nextInstance() {
+  instanceIndex++;
+  return INVIDIOUS_INSTANCES[instanceIndex % INVIDIOUS_INSTANCES.length];
+}
+
+function httpsGet(url) {
   return new Promise((resolve, reject) => {
-    if (redirectCount > 10) {
-      reject(new Error("Too many redirects"));
-      return;
-    }
-    const file = createWriteStream(dest);
-    https.request(url, {
+    const req = https.request(url, {
       method: "GET",
       rejectUnauthorized: false,
-      timeout: 30000,
-      headers: { "User-Agent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36" },
-    }, (response) => {
-      if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
-        file.close();
-        unlink(dest, () => {});
-        downloadFile(response.headers.location, dest, redirectCount + 1).then(resolve).catch(reject);
-        return;
-      }
-      if (response.statusCode !== 200) {
-        reject(new Error(`Failed to download: ${response.statusCode}`));
-        return;
-      }
-      response.pipe(file);
-      file.on("finish", () => file.close(resolve));
-    }).on("error", (err) => {
-      unlink(dest, () => {});
-      reject(err);
-    }).end();
+      timeout: 15000,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36",
+        "Accept": "application/json",
+      },
+    }, (res) => {
+      let data = "";
+      res.on("data", (chunk) => (data += chunk));
+      res.on("end", () => {
+        const contentType = res.headers["content-type"] || "";
+        if (res.statusCode >= 400) {
+          reject(new Error(`HTTP ${res.statusCode}: ${data.substring(0, 200)}`));
+        } else if (!contentType.includes("application/json")) {
+          reject(new Error(`Non-JSON (${contentType}): ${data.substring(0, 200)}`));
+        } else {
+          resolve(data);
+        }
+      });
+    });
+    req.on("error", reject);
+    req.on("timeout", () => req.destroy(new Error("Timeout")));
+    req.end();
   });
 }
 
-// Initialize YTDLP path
-let YTDLP_PATH = null;
-let YTDLP_READY = getYtDlpPath().then(p => { YTDLP_PATH = p; }).catch(e => console.error("yt-dlp init error:", e));
+// Try all instances with retries
+async function tryInstances(fn, maxRetries = 2) {
+  let lastError;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    for (let i = 0; i < 5; i++) {
+      const instance = INVIDIOUS_INSTANCES[instanceIndex % INVIDIOUS_INSTANCES.length];
+      instanceIndex++;
+      try {
+        return await fn(instance);
+      } catch (err) {
+        console.warn(`Instance ${instance} failed: ${err.message}`);
+      }
+    }
+    await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+  }
+  throw lastError || new Error("All Invidious instances failed");
+}
 
-// yt-dlp args otimizados para bypass bot detection
-const searchArgs = (q) => [
-  "--flat-playlist",
-  "--no-warnings",
-  "--quiet",
-  "--dump-single-json",
-  "--playlist-items", "1-6",
-  "--extractor-args", "youtube:player_client=android,mweb,tv_embedded",
-  "--extractor-args", "youtube:player_skip=webpage,configs,js",
-  "--user-agent", "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36",
-  "--no-check-certificates",
-  "--ignore-errors",
-  `ytsearch6:${q}`,
-];
+async function search(query) {
+  return tryInstances(async (instance) => {
+    const url = `${instance}/api/v1/search?q=${encodeURIComponent(query)}&type=video&page=1`;
+    const data = await httpsGet(url);
+    const results = JSON.parse(data);
+    return results.map((v) => ({
+      id: v.videoId,
+      title: v.title,
+      artist: v.author,
+      durationMs: v.lengthSeconds * 1000,
+      thumbnail: v.videoThumbnails?.[v.videoThumbnails.length - 1]?.url || `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`,
+    })).filter((v) => v.id && v.title);
+  }, 2);
+}
 
-const streamArgs = (id) => [
-  "--no-warnings",
-  "--quiet",
-  "--dump-single-json",
-  "--extractor-args", "youtube:player_client=android,mweb,tv_embedded",
-  "--extractor-args", "youtube:player_skip=webpage,configs,js",
-  "--user-agent", "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36",
-  "--no-check-certificates",
-  "--ignore-errors",
-  "-f", "bestaudio/best",
-  id,
-];
+async function getStream(videoId) {
+  return tryInstances(async (instance) => {
+    const url = `${instance}/api/v1/videos/${videoId}?fields=videoId,title,author,lengthSeconds,videoThumbnails,formatStreams,adaptiveFormats`;
+    const data = await httpsGet(url);
+    const info = JSON.parse(data);
+    
+    const audioFormat = [...(info.adaptiveFormats || []), ...(info.formatStreams || [])]
+      .filter((f) => f.type?.includes("audio") || f.mimeType?.includes("audio"))
+      .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+    
+    if (!audioFormat?.url) throw new Error("No audio stream");
+    
+    return {
+      id: info.videoId,
+      title: info.title,
+      artist: info.author,
+      durationMs: info.lengthSeconds * 1000,
+      thumbnail: info.videoThumbnails?.[info.videoThumbnails.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+      url: audioFormat.url,
+    };
+  }, 3);
+}
 
-async function run(args, timeoutMs = 60000) {
-  await YTDLP_READY;
+function httpsGet(url) {
   return new Promise((resolve, reject) => {
-    console.log("yt-dlp args:", args.join(" "));
-    const child = spawn(YTDLP_PATH, args, { windowsHide: true });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.setEncoding("utf8");
-    child.stderr.setEncoding("utf8");
-    child.stdout.on("data", (d) => (stdout += d));
-    child.stderr.on("data", (d) => (stderr += d));
-    const timer = setTimeout(() => {
-      child.kill();
-      reject(new Error(`yt-dlp timeout após ${timeoutMs}ms`));
-    }, timeoutMs);
-    child.on("error", (err) => {
-      clearTimeout(timer);
-      reject(new Error(`não foi possível executar yt-dlp: ${err.message}`));
+    const req = https.request(url, {
+      method: "GET",
+      rejectUnauthorized: false,
+      timeout: 15000,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36",
+        "Accept": "application/json",
+      },
+    }, (res) => {
+      let data = "";
+      res.on("data", (chunk) => (data += chunk));
+      res.on("end", () => {
+        const contentType = res.headers["content-type"] || "";
+        if (res.statusCode >= 400) {
+          reject(new Error(`HTTP ${res.statusCode}: ${data.substring(0, 200)}`));
+        } else if (!contentType.includes("application/json")) {
+          reject(new Error(`Non-JSON (${contentType}): ${data.substring(0, 200)}`));
+        } else {
+          resolve(data);
+        }
+      });
     });
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      if (code === 0) {
-        console.log("yt-dlp stdout:", stdout.substring(0, 200));
-        resolve(stdout.trim());
-      } else {
-        console.error("yt-dlp stderr:", stderr);
-        reject(new Error(stderr.trim().split("\n").pop() || `yt-dlp saiu com código ${code}`));
-      }
-    });
+    req.on("error", reject);
+    req.on("timeout", () => req.destroy(new Error("Timeout")));
+    req.end();
   });
-}
-
-function parseJson(text) {
-  const start = text.indexOf("{");
-  if (start < 0) throw new Error("nenhum JSON retornado pelo yt-dlp");
-  return JSON.parse(text.slice(start));
 }
 
 function send(res, code, payload) {
@@ -152,34 +154,15 @@ const server = createServer(async (req, res) => {
     if (url.pathname === "/api/search") {
       const q = (url.searchParams.get("q") || "").trim();
       if (!q) return send(res, 400, { detail: "Parâmetro q é obrigatório" });
-      const data = parseJson(await run(searchArgs(q), 40000));
-      const entries = (data.entries || []).filter((e) => e.id && e.title);
-      return send(
-        res,
-        200,
-        entries.map((e) => ({
-          id: e.id,
-          title: e.title,
-          artist: e.uploader || null,
-          durationMs: (e.duration || 0) * 1000,
-          thumbnail: e.thumbnail || `https://i.ytimg.com/vi/${e.id}/hqdefault.jpg`,
-        })),
-      );
+      const results = await search(q);
+      return send(res, 200, results.slice(0, 6));
     }
 
     const m = url.pathname.match(/^\/api\/stream\/([^/]+)$/);
     if (m) {
       const id = decodeURIComponent(m[1]);
-      const info = parseJson(await run(streamArgs(id), 60000));
-      if (!info.url) return send(res, 502, { detail: "Stream de áudio não encontrado" });
-      return send(res, 200, {
-        id: info.id,
-        title: info.title,
-        artist: info.uploader || null,
-        durationMs: (info.duration || 0) * 1000,
-        thumbnail: info.thumbnail || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
-        url: info.url,
-      });
+      const info = await getStream(id);
+      return send(res, 200, info);
     }
 
     send(res, 404, { detail: "Endpoint não encontrado" });
