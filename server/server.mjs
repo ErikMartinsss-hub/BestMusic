@@ -102,10 +102,6 @@ async function run(args, timeoutMs = 60000) {
         reject(new Error(stderr.trim().split("\n").pop() || `yt-dlp saiu com código ${code}`));
       }
     });
-      clearTimeout(timer);
-      if (code === 0) resolve(stdout.trim());
-      else reject(new Error(stderr.trim().split("\n").pop() || `yt-dlp saiu com código ${code}`));
-    });
   });
 }
 
