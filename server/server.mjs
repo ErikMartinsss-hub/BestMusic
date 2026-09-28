@@ -1,145 +1,99 @@
-// BestMusic server (Node, sem dependências).
+// BestMusic server - usa Invidious API (proxy YouTube sem bloqueio).
 //
 // Como rodar:
 //   node server.mjs
 //
-// Emulador Android: http://10.0.2.2:8000
-// Aparelho físico:  http://<IP-da-sua-maquina>:8000 (configurar no app, menu ⚙)
-// Render/Cloud: baixa yt-dlp Linux automaticamente no startup.
+// Invidious instances públicas:
+//   https://yewtu.be (recomendado)
+//   https://piped.video
+//   https://invidious.snopyta.org
 
-import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import { existsSync, chmodSync, createWriteStream, unlink } from "node:fs";
-import { platform } from "node:process";
 import https from "node:https";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const INVIDIOUS_INSTANCES = [
+  "https://yewtu.be",
+  "https://invidious.snopyta.org",
+  "https://yewtu.be",
+];
 
-// Resolve yt-dlp binary per platform
-async function getYtDlpPath() {
-  const isWindows = platform === "win32";
-  const binaryName = isWindows ? "yt-dlp.exe" : "yt-dlp";
-  const localPath = join(__dirname, binaryName);
+let currentInstanceIndex = 0;
 
-  if (existsSync(localPath)) {
-    if (!isWindows) chmodSync(localPath, 0o755);
-    return localPath;
-  }
-
-  // Download Linux binary on non-Windows (Render, etc.)
-  if (!isWindows) {
-    console.log("Baixando yt-dlp Linux...");
-    const url = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux";
-    await downloadFile(url, localPath);
-    chmodSync(localPath, 0o755);
-    console.log("yt-dlp pronto:", localPath);
-    return localPath;
-  }
-
-  throw new Error("yt-dlp não encontrado. No Windows, coloque yt-dlp.exe na pasta server/");
+function getInstance() {
+  return INVIDIOUS_INSTANCES[currentInstanceIndex];
 }
 
-function downloadFile(url, dest, redirectCount = 0) {
+function nextInstance() {
+  currentInstanceIndex = (currentInstanceIndex + 1) % INVIDIOUS_INSTANCES.length;
+  return getInstance();
+}
+
+function httpsGet(url) {
   return new Promise((resolve, reject) => {
-    if (redirectCount > 10) {
-      reject(new Error("Too many redirects"));
-      return;
+    https.get(url, (res) => {
+      let data = "";
+      res.on("data", (chunk) => (data += chunk));
+      res.on("end", () => {
+        if (res.statusCode >= 400) {
+          reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+        } else {
+          resolve(data);
+        }
+      });
+    }).on("error", reject);
+  });
+}
+
+async function searchInvidious(query) {
+  const instance = getInstance();
+  const url = `${instance}/api/v1/search?q=${encodeURIComponent(query)}&type=video&page=1`;
+  
+  try {
+    const data = await httpsGet(url);
+    const results = JSON.parse(data);
+    return results.map((v) => ({
+      id: v.videoId,
+      title: v.title,
+      artist: v.author,
+      durationMs: v.lengthSeconds * 1000,
+      thumbnail: v.videoThumbnails?.[v.videoThumbnails.length - 1]?.url || `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`,
+    })).filter((v) => v.id && v.title);
+  } catch (err) {
+    nextInstance();
+    throw new Error(`Invidious search failed: ${err.message}`);
+  }
+}
+
+async function getStreamInfo(videoId) {
+  const instance = getInstance();
+  const url = `${instance}/api/v1/videos/${videoId}?fields=videoId,title,author,lengthSeconds,videoThumbnails,formatStreams,adaptiveFormats`;
+  
+  try {
+    const data = await httpsGet(url);
+    const info = JSON.parse(data);
+    
+    // Get best audio stream
+    const audioFormat = [...(info.adaptiveFormats || []), ...(info.formatStreams || [])]
+      .filter((f) => f.type?.includes("audio") || f.mimeType?.includes("audio"))
+      .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+    
+    if (!audioFormat?.url) {
+      throw new Error("No audio stream found");
     }
-    const file = createWriteStream(dest);
-    https.get(url, (response) => {
-      if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
-        // Follow redirect
-        file.close();
-        unlink(dest, () => {});
-        downloadFile(response.headers.location, dest, redirectCount + 1).then(resolve).catch(reject);
-        return;
-      }
-      if (response.statusCode !== 200) {
-        reject(new Error(`Failed to download: ${response.statusCode}`));
-        return;
-      }
-      response.pipe(file);
-      file.on("finish", () => file.close(resolve));
-    }).on("error", (err) => {
-      unlink(dest, () => {});
-      reject(err);
-    });
-  });
+    
+    return {
+      id: info.videoId,
+      title: info.title,
+      artist: info.author,
+      durationMs: info.lengthSeconds * 1000,
+      thumbnail: info.videoThumbnails?.[info.videoThumbnails.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+      url: audioFormat.url,
+    };
+  } catch (err) {
+    nextInstance();
+    throw new Error(`Invidious stream failed: ${err.message}`);
+  }
 }
-
-// Initialize YTDLP path
-let YTDLP_PATH = null;
-let YTDLP_READY = getYtDlpPath().then(p => { YTDLP_PATH = p; }).catch(e => console.error("yt-dlp init error:", e));
-
-async function run(args, timeoutMs = 60000) {
-  await YTDLP_READY;
-  return new Promise((resolve, reject) => {
-    console.log("yt-dlp args:", args.join(" "));
-    const child = spawn(YTDLP_PATH, args, { windowsHide: true });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.setEncoding("utf8");
-    child.stderr.setEncoding("utf8");
-    child.stdout.on("data", (d) => (stdout += d));
-    child.stderr.on("data", (d) => (stderr += d));
-    const timer = setTimeout(() => {
-      child.kill();
-      reject(new Error(`yt-dlp timeout após ${timeoutMs}ms`));
-    }, timeoutMs);
-    child.on("error", (err) => {
-      clearTimeout(timer);
-      reject(new Error(`não foi possível executar yt-dlp: ${err.message}`));
-    });
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      if (code === 0) {
-        console.log("yt-dlp stdout:", stdout.substring(0, 200));
-        resolve(stdout.trim());
-      } else {
-        console.error("yt-dlp stderr:", stderr);
-        reject(new Error(stderr.trim().split("\n").pop() || `yt-dlp saiu com código ${code}`));
-      }
-    });
-  });
-}
-
-function parseJson(text) {
-  const start = text.indexOf("{");
-  if (start < 0) throw new Error("nenhum JSON retornado pelo yt-dlp");
-  return JSON.parse(text.slice(start));
-}
-
-const searchArgs = (q) => [
-  "--flat-playlist",
-  "--no-warnings",
-  "--quiet",
-  "--dump-single-json",
-  "--playlist-items", "1-6",
-  "--extractor-args", "youtube:player_client=android,mweb",
-  "--extractor-args", "youtube:player_skip=webpage,configs",
-  "--user-agent", "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36",
-  "--no-check-certificates",
-  `ytsearch6:${q}`,
-];
-
-const streamArgs = (id) => [
-  "--no-warnings",
-  "--quiet",
-  "--dump-single-json",
-  "--extractor-args", "youtube:player_client=android,mweb,tv_embedded",
-  "--extractor-args", "youtube:player_skip=webpage,configs",
-  "--user-agent", "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36",
-  "--no-check-certificates",
-  "-f", "bestaudio/best",
-  id,
-];
-
-const thumb = (info) =>
-  info.thumbnail ||
-  (info.thumbnails?.length ? info.thumbnails.at(-1).url : null) ||
-  `https://i.ytimg.com/vi/${info.id}/hqdefault.jpg`;
 
 function send(res, code, payload) {
   const body = typeof payload === "string" ? payload : JSON.stringify(payload);
@@ -157,39 +111,21 @@ const server = createServer(async (req, res) => {
     if (url.pathname === "/api/search") {
       const q = (url.searchParams.get("q") || "").trim();
       if (!q) return send(res, 400, { detail: "Parâmetro q é obrigatório" });
-      const data = parseJson(await run(searchArgs(q), 40000));
-      const entries = (data.entries || []).filter((e) => e.id && e.title);
-      return send(
-        res,
-        200,
-        entries.map((e) => ({
-          id: e.id,
-          title: e.title,
-          artist: null,
-          durationMs: (e.duration || 0) * 1000,
-          thumbnail: e.thumbnail || `https://i.ytimg.com/vi/${e.id}/hqdefault.jpg`,
-        })),
-      );
+      
+      const results = await searchInvidious(q);
+      return send(res, 200, results.slice(0, 6));
     }
 
     const m = url.pathname.match(/^\/api\/stream\/([^/]+)$/);
     if (m) {
       const id = decodeURIComponent(m[1]);
-      const info = parseJson(await run(streamArgs(id)));
-      if (!info.url) return send(res, 502, { detail: "Stream de áudio não encontrado" });
-      return send(res, 200, {
-        id: info.id,
-        title: info.title,
-        artist: info.uploader || null,
-        durationMs: (info.duration || 0) * 1000,
-        thumbnail: thumb(info),
-        url: info.url,
-      });
+      const info = await getStreamInfo(id);
+      return send(res, 200, info);
     }
 
     send(res, 404, { detail: "Endpoint não encontrado" });
   } catch (err) {
-    send(res, 502, { detail: `yt-dlp falhou: ${err.message}` });
+    send(res, 502, { detail: err.message });
   }
 });
 
