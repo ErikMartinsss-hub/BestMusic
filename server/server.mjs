@@ -1,35 +1,20 @@
-// BestMusic server - usa Invidious API + Piped API fallback.
-// Melhor estabilidade com múltiplas instâncias e retry.
+// BestMusic server - Piped API (mais estável que Invidious no Render)
 
 import { createServer } from "node:http";
 import https from "node:https";
 
-// Invidious instances (mais estáveis primeiro)
-const INVIDIOUS_INSTANCES = [
-  "https://yewtu.be",
-  "https://invidious.snopyta.org",
-  "https://invidious.nerdvpn.de",
-  "https://invidious.kavin.rocks",
-  "https://yewtu.be",
-];
-
-// Piped instances (alternativa)
 const PIPED_INSTANCES = [
   "https://piped.video",
   "https://piped.kavin.rocks",
   "https://piped.mha.fi",
+  "https://piped.tokhmi.xyz",
 ];
 
-let invidiousIndex = 0;
 let pipedIndex = 0;
-
-function getInvidious() { return INVIDIOUS_INSTANCES[invidiousIndex % INVIDIOUS_INSTANCES.length]; }
-function nextInvidious() { invidiousIndex++; }
-
 function getPiped() { return PIPED_INSTANCES[pipedIndex % PIPED_INSTANCES.length]; }
 function nextPiped() { pipedIndex++; }
 
-function httpsGet(url, timeoutMs = 10000) {
+function httpsGet(url) {
   return new Promise((resolve, reject) => {
     const req = https.get(url, (res) => {
       let data = "";
@@ -46,44 +31,28 @@ function httpsGet(url, timeoutMs = 10000) {
       });
     });
     req.on("error", reject);
-    req.setTimeout(timeoutMs, () => req.destroy(new Error("Timeout")));
+    req.setTimeout(15000, () => req.destroy(new Error("Timeout")));
   });
 }
 
-// Try multiple instances with exponential backoff
-async function tryInstances(instances, getNext, fn, maxRetries = 3) {
+// Try all instances with retries
+async function tryAllInstances(fn, maxRetries = 2) {
   let lastError;
   for (let attempt = 0; attempt < maxRetries; attempt++) {
-    for (let i = 0; i < instances.length; i++) {
+    for (let i = 0; i < PIPED_INSTANCES.length; i++) {
       try {
-        return await fn(instances[i]);
+        return await fn(PIPED_INSTANCES[i]);
       } catch (err) {
         console.warn(`Instance failed: ${err.message}`);
       }
     }
-    // Wait before retry
-    await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+    await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
   }
-  throw new Error("All instances failed after retries");
+  throw lastError || new Error("All Piped instances failed");
 }
 
-async function searchInvidious(query) {
-  return tryInstances(INVIDIOUS_INSTANCES, () => nextInvidious(), async (instance) => {
-    const url = `${instance}/api/v1/search?q=${encodeURIComponent(query)}&type=video&page=1`;
-    const data = await httpsGet(url);
-    const results = JSON.parse(data);
-    return results.map((v) => ({
-      id: v.videoId,
-      title: v.title,
-      artist: v.author,
-      durationMs: v.lengthSeconds * 1000,
-      thumbnail: v.videoThumbnails?.[v.videoThumbnails.length - 1]?.url || `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`,
-    })).filter((v) => v.id && v.title);
-  }, 2);
-}
-
-async function searchPiped(query) {
-  return tryInstances(PIPED_INSTANCES, () => nextPiped(), async (instance) => {
+async function search(query) {
+  return tryAllInstances(async (instance) => {
     const url = `${instance}/api/v1/search?q=${encodeURIComponent(query)}&filter=music`;
     const data = await httpsGet(url);
     const results = JSON.parse(data);
@@ -97,36 +66,12 @@ async function searchPiped(query) {
   }, 2);
 }
 
-async function getStreamInvidious(videoId) {
-  return tryInstances(INVIDIOUS_INSTANCES, () => nextInvidious(), async (instance) => {
-    const url = `${instance}/api/v1/videos/${videoId}?fields=videoId,title,author,lengthSeconds,videoThumbnails,formatStreams,adaptiveFormats`;
-    const data = await httpsGet(url);
-    const info = JSON.parse(data);
-    
-    const audioFormat = [...(info.adaptiveFormats || []), ...(info.formatStreams || [])]
-      .filter((f) => f.type?.includes("audio") || f.mimeType?.includes("audio"))
-      .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
-    
-    if (!audioFormat?.url) throw new Error("No audio stream");
-    
-    return {
-      id: info.videoId,
-      title: info.title,
-      artist: info.author,
-      durationMs: info.lengthSeconds * 1000,
-      thumbnail: info.videoThumbnails?.[info.videoThumbnails.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-      url: audioFormat.url,
-    };
-  }, 3);
-}
-
-async function getStreamPiped(videoId) {
-  return tryInstances(PIPED_INSTANCES, () => nextPiped(), async (instance) => {
+async function getStream(videoId) {
+  return tryAllInstances(async (instance) => {
     const url = `${instance}/api/v1/streams/${videoId}`;
     const data = await httpsGet(url);
     const info = JSON.parse(data);
     
-    // Piped returns audioStreams array
     const audioStream = info.audioStreams?.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
     if (!audioStream?.url) throw new Error("No audio stream");
     
@@ -141,24 +86,25 @@ async function getStreamPiped(videoId) {
   }, 3);
 }
 
-// Main search - try Invidious first, fallback to Piped
-async function search(query) {
-  try {
-    return await searchInvidious(query);
-  } catch (e) {
-    console.warn("Invidious search failed, trying Piped:", e.message);
-    return await searchPiped(query);
-  }
-}
-
-// Main stream - try Invidious first, fallback to Piped
-async function getStream(videoId) {
-  try {
-    return await getStreamInvidious(videoId);
-  } catch (e) {
-    console.warn("Invidious stream failed, trying Piped:", e.message);
-    return await getStreamPiped(videoId);
-  }
+function httpsGet(url) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, (res) => {
+      let data = "";
+      res.on("data", (chunk) => (data += chunk));
+      res.on("end", () => {
+        const contentType = res.headers["content-type"] || "";
+        if (res.statusCode >= 400) {
+          reject(new Error(`HTTP ${res.statusCode}: ${data.substring(0, 200)}`));
+        } else if (!contentType.includes("application/json")) {
+          reject(new Error(`Non-JSON (${contentType}): ${data.substring(0, 200)}`));
+        } else {
+          resolve(data);
+        }
+      });
+    });
+    req.on("error", reject);
+    req.setTimeout(20000, () => req.destroy(new Error("Timeout")));
+  });
 }
 
 function send(res, code, payload) {
