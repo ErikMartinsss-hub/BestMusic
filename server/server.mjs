@@ -16,7 +16,11 @@ function nextPiped() { pipedIndex++; }
 
 function httpsGet(url) {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, (res) => {
+    const req = https.request(url, {
+      method: "GET",
+      rejectUnauthorized: false, // Disable SSL cert verification for Render
+      timeout: 15000,
+    }, (res) => {
       let data = "";
       res.on("data", (chunk) => (data += chunk));
       res.on("end", () => {
@@ -31,7 +35,8 @@ function httpsGet(url) {
       });
     });
     req.on("error", reject);
-    req.setTimeout(15000, () => req.destroy(new Error("Timeout")));
+    req.on("timeout", () => req.destroy(new Error("Timeout")));
+    req.end();
   });
 }
 
