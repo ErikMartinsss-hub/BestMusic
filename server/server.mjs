@@ -108,36 +108,6 @@ async function getStream(videoId) {
   }, 3);
 }
 
-function httpsGet(url) {
-  return new Promise((resolve, reject) => {
-    const req = https.request(url, {
-      method: "GET",
-      rejectUnauthorized: false,
-      timeout: 15000,
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36",
-        "Accept": "application/json",
-      },
-    }, (res) => {
-      let data = "";
-      res.on("data", (chunk) => (data += chunk));
-      res.on("end", () => {
-        const contentType = res.headers["content-type"] || "";
-        if (res.statusCode >= 400) {
-          reject(new Error(`HTTP ${res.statusCode}: ${data.substring(0, 200)}`));
-        } else if (!contentType.includes("application/json")) {
-          reject(new Error(`Non-JSON (${contentType}): ${data.substring(0, 200)}`));
-        } else {
-          resolve(data);
-        }
-      });
-    });
-    req.on("error", reject);
-    req.on("timeout", () => req.destroy(new Error("Timeout")));
-    req.end();
-  });
-}
-
 function send(res, code, payload) {
   const body = typeof payload === "string" ? payload : JSON.stringify(payload);
   res.writeHead(code, {
