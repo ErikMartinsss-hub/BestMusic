@@ -117,6 +117,8 @@ const searchArgs = (q) => [
   "--quiet",
   "--dump-single-json",
   "--playlist-items", "1-6",
+  "--extractor-args", "youtube:player_client=android",
+  "--user-agent", "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36",
   `ytsearch6:${q}`,
 ];
 
@@ -124,6 +126,8 @@ const streamArgs = (id) => [
   "--no-warnings",
   "--quiet",
   "--dump-single-json",
+  "--extractor-args", "youtube:player_client=android",
+  "--user-agent", "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36",
   "-f", "bestaudio/best",
   id,
 ];
