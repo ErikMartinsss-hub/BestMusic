@@ -117,8 +117,10 @@ const searchArgs = (q) => [
   "--quiet",
   "--dump-single-json",
   "--playlist-items", "1-6",
-  "--extractor-args", "youtube:player_client=android",
+  "--extractor-args", "youtube:player_client=android,mweb",
+  "--extractor-args", "youtube:player_skip=webpage,configs",
   "--user-agent", "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36",
+  "--no-check-certificates",
   `ytsearch6:${q}`,
 ];
 
@@ -126,8 +128,10 @@ const streamArgs = (id) => [
   "--no-warnings",
   "--quiet",
   "--dump-single-json",
-  "--extractor-args", "youtube:player_client=android",
+  "--extractor-args", "youtube:player_client=android,mweb,tv_embedded",
+  "--extractor-args", "youtube:player_skip=webpage,configs",
   "--user-agent", "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36",
+  "--no-check-certificates",
   "-f", "bestaudio/best",
   id,
 ];
